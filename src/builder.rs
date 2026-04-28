@@ -296,7 +296,7 @@ impl<'buf> MessageBuilder<'buf, Complete> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::OptionNumber;
+    use crate::{BlockOption, BlockSize, OptionNumber};
 
     #[test]
     fn test_no_token() -> Result<(), CoapBuildError> {
@@ -478,6 +478,33 @@ mod tests {
 
             assert_eq!(opt.as_uint(), Some(value), "Failed for value {}", value);
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_option_block_option() -> Result<(), CoapBuildError> {
+        let mut tx_buf = [0; 128];
+        let block = BlockOption::new(0x123, true, BlockSize::B256)?;
+
+        let packet = MessageBuilder::new(&mut tx_buf)?
+            .request(MessageType::Confirmable, RequestCode::Get)
+            .message_id(0x1234)
+            .no_token()
+            .option_uint(OptionNumber::Block1, block)?
+            .no_payload()
+            .build();
+
+        use crate::parser::Message;
+        let msg = Message::parse(packet).unwrap();
+        let opt = msg
+            .options
+            .into_iter()
+            .find(|o| o.number == OptionNumber::Block1)
+            .unwrap();
+
+        assert_eq!(opt.as_uint(), Some(u64::from(block)));
+        assert_eq!(opt.as_block().unwrap(), block);
 
         Ok(())
     }

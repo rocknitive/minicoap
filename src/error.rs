@@ -12,6 +12,8 @@ pub enum CoapBuildError {
     /// Options must be added in ascending order by option number.
     /// An attempt was made to add an option with a number less than or equal to the previous option.
     OptionNumberOutOfOrder,
+    /// A block option value was invalid before encoding.
+    InvalidBlockOption(BlockOptionError),
 }
 
 impl core::fmt::Display for CoapBuildError {
@@ -25,6 +27,7 @@ impl core::fmt::Display for CoapBuildError {
                 write!(f, "Payload marker without payload")
             }
             CoapBuildError::OptionNumberOutOfOrder => write!(f, "Option number out of order"),
+            CoapBuildError::InvalidBlockOption(err) => write!(f, "{}", err),
         }
     }
 }
@@ -52,6 +55,8 @@ pub enum CoapParseError {
     EmptyMessageWithData,
     /// A payload marker (0xFF) was present but no payload data followed it.
     PayloadMarkerWithoutPayload,
+    /// A block option contained an invalid packed value.
+    InvalidBlockOption(BlockOptionError),
 }
 
 impl core::fmt::Display for CoapParseError {
@@ -70,8 +75,50 @@ impl core::fmt::Display for CoapParseError {
             CoapParseError::PayloadMarkerWithoutPayload => {
                 write!(f, "Payload marker present but no payload data")
             }
+            CoapParseError::InvalidBlockOption(err) => write!(f, "{}", err),
         }
     }
 }
 
 impl core::error::Error for CoapParseError {}
+
+
+/// Errors that can occur while validating or decoding a CoAP block option value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum BlockOptionError {
+    /// The block number exceeded the 20-bit limit of the CoAP block format.
+    InvalidBlockNumber(u64),
+    /// The packed block size exponent did not map to a valid block size.
+    InvalidBlockSize,
+    /// The raw block option value exceeded the allowed 3-byte encoding.
+    InvalidValueLength(usize),
+}
+
+impl core::fmt::Display for BlockOptionError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            BlockOptionError::InvalidBlockNumber(num) => {
+                write!(f, "Invalid block number (expected <= 1048575, got {})", num)
+            }
+            BlockOptionError::InvalidBlockSize => write!(f, "Invalid block size exponent"),
+            BlockOptionError::InvalidValueLength(len) => {
+                write!(f, "Invalid block option length (expected 0-3, got {})", len)
+            }
+        }
+    }
+}
+
+impl core::error::Error for BlockOptionError {}
+
+impl From<BlockOptionError> for CoapBuildError {
+    fn from(value: BlockOptionError) -> Self {
+        CoapBuildError::InvalidBlockOption(value)
+    }
+}
+
+impl From<BlockOptionError> for CoapParseError {
+    fn from(err: BlockOptionError) -> Self {
+        CoapParseError::InvalidBlockOption(err)
+    }
+}

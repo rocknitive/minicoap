@@ -16,14 +16,16 @@
 
 use num_enum::{FromPrimitive, IntoPrimitive};
 
+mod block;
 mod builder;
 pub(crate) mod error;
 mod parser;
 
+pub use block::{BlockOption, BlockSize};
 pub use builder::MessageBuilder;
 #[doc(hidden)]
 pub use builder::{Complete, NeedsBuffer, NeedsHeader, NeedsMessageId, NeedsPayload, NeedsToken};
-pub use error::{CoapBuildError, CoapParseError};
+pub use error::{BlockOptionError, CoapBuildError, CoapParseError};
 pub use parser::{CoapOption, CoapOptions, Message, OptionIterator};
 
 #[macro_export]

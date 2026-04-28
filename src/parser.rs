@@ -1,5 +1,5 @@
 use crate::error::CoapParseError;
-use crate::{MessageType, OptionNumber, Version};
+use crate::{BlockOption, MessageType, OptionNumber, Version};
 
 type ParseResult<T> = core::result::Result<T, CoapParseError>;
 
@@ -279,6 +279,11 @@ impl<'a> CoapOption<'a> {
         core::str::from_utf8(self.value)
     }
 
+    /// Interpret the option value as a block-wise transfer option.
+    pub fn as_block(&self) -> Result<BlockOption, CoapParseError> {
+        Ok(BlockOption::try_from_option(self)?)
+    }
+
     /// Check if this option is critical
     pub fn is_critical(&self) -> bool {
         self.number.is_critical()
@@ -383,7 +388,10 @@ impl<'a> Iterator for OptionIterator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CoapBuildError, MessageBuilder, OptionNumber, RequestCode};
+    use crate::{
+        BlockOption, BlockOptionError, BlockSize, CoapBuildError, MessageBuilder, OptionNumber,
+        RequestCode,
+    };
 
     extern crate alloc;
     use alloc::vec::Vec;
@@ -722,6 +730,60 @@ mod tests {
         assert_eq!(content_format_opt.as_uint(), Some(99));
         let cf: ContentFormat = (content_format_opt.as_uint().unwrap() as u16).into();
         assert_eq!(cf, ContentFormat::Unknown(99));
+
+        Ok(())
+    }
+
+    #[test]
+    fn parse_block_option() -> Result<(), CoapBuildError> {
+        let mut buffer = [0; 128];
+        let block = BlockOption::new(3, true, BlockSize::B128)?;
+
+        let packet = MessageBuilder::new(&mut buffer)?
+            .request(MessageType::Confirmable, RequestCode::Get)
+            .message_id(0x0001)
+            .no_token()
+            .option_uint(OptionNumber::Block2, block)?
+            .no_payload()
+            .build();
+
+        let message = Message::parse(packet).unwrap();
+        let option = message
+            .options
+            .into_iter()
+            .find(|opt| opt.number == OptionNumber::Block2)
+            .unwrap();
+
+        assert_eq!(option.as_block().unwrap(), block);
+
+        Ok(())
+    }
+
+    #[test]
+    fn parse_invalid_block_option() -> Result<(), CoapBuildError> {
+        let mut buffer = [0; 128];
+
+        let packet = MessageBuilder::new(&mut buffer)?
+            .request(MessageType::Confirmable, RequestCode::Get)
+            .message_id(0x0001)
+            .no_token()
+            .option(OptionNumber::Block2, &[0x07])?
+            .no_payload()
+            .build();
+
+        let message = Message::parse(packet).unwrap();
+        let option = message
+            .options
+            .into_iter()
+            .find(|opt| opt.number == OptionNumber::Block2)
+            .unwrap();
+
+        assert_eq!(
+            option.as_block(),
+            Err(CoapParseError::InvalidBlockOption(
+                BlockOptionError::InvalidBlockSize
+            ))
+        );
 
         Ok(())
     }
