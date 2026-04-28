@@ -383,21 +383,19 @@ impl<'a> Iterator for OptionIterator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{MessageBuilder, OptionNumber, RequestCode};
+    use crate::{CoapBuildError, MessageBuilder, OptionNumber, RequestCode};
 
     extern crate alloc;
     use alloc::vec::Vec;
 
     #[test]
-    fn parse_simple_get_request() {
+    fn parse_simple_get_request() -> Result<(), CoapBuildError> {
         let mut buffer = [0; 128];
 
-        let packet = MessageBuilder::new(&mut buffer)
-            .unwrap()
+        let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x1234)
-            .no_token()
-            .unwrap()
+            .no_token()?
             .no_payload()
             .build();
 
@@ -412,19 +410,19 @@ mod tests {
         assert!(message.is_request());
         assert!(!message.is_response());
         assert!(!message.is_empty());
+
+        Ok(())
     }
 
     #[test]
-    fn parse_request_with_token() {
+    fn parse_request_with_token() -> Result<(), CoapBuildError> {
         let mut buffer = [0; 128];
         let token = [0x12, 0x34, 0x56, 0x78];
 
-        let packet = MessageBuilder::new(&mut buffer)
-            .unwrap()
+        let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0xABCD)
-            .token(&token)
-            .unwrap()
+            .token(&token)?
             .no_payload()
             .build();
 
@@ -432,45 +430,41 @@ mod tests {
 
         assert_eq!(message.token, &token);
         assert_eq!(message.message_id, 0xABCD);
+
+        Ok(())
     }
 
     #[test]
-    fn parse_request_with_payload() {
+    fn parse_request_with_payload() -> Result<(), CoapBuildError> {
         let mut buffer = [0; 128];
         let payload_data = b"Hello, CoAP!";
 
-        let packet = MessageBuilder::new(&mut buffer)
-            .unwrap()
+        let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::NonConfirmable, RequestCode::Post)
             .message_id(0x0001)
-            .no_token()
-            .unwrap()
-            .payload(payload_data)
-            .unwrap()
+            .no_token()?
+            .payload(payload_data)?
             .build();
 
         let message = Message::parse(packet).unwrap();
 
         assert_eq!(message.message_type, MessageType::NonConfirmable);
         assert_eq!(message.payload, Some(&payload_data[..]));
+
+        Ok(())
     }
 
     #[test]
-    fn parse_request_with_options() {
+    fn parse_request_with_options() -> Result<(), CoapBuildError> {
         let mut buffer = [0; 128];
 
-        let packet = MessageBuilder::new(&mut buffer)
-            .unwrap()
+        let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x5678)
-            .no_token()
-            .unwrap()
-            .option(OptionNumber::UriPath, b"temperature")
-            .unwrap()
-            .option(OptionNumber::UriPath, b"sensor")
-            .unwrap()
-            .option(OptionNumber::Accept, &[0])
-            .unwrap()
+            .no_token()?
+            .option(OptionNumber::UriPath, b"temperature")?
+            .option(OptionNumber::UriPath, b"sensor")?
+            .option(OptionNumber::Accept, &[0])?
             .no_payload()
             .build();
 
@@ -487,22 +481,20 @@ mod tests {
 
         assert_eq!(options[2].number, OptionNumber::Accept);
         assert_eq!(options[2].value, &[0]);
+
+        Ok(())
     }
 
     #[test]
-    fn parse_option_find() {
+    fn parse_option_find() -> Result<(), CoapBuildError> {
         let mut buffer = [0; 128];
 
-        let packet = MessageBuilder::new(&mut buffer)
-            .unwrap()
+        let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x0001)
-            .no_token()
-            .unwrap()
-            .option(OptionNumber::UriPath, b"test")
-            .unwrap()
-            .option(OptionNumber::ContentFormat, &[0])
-            .unwrap()
+            .no_token()?
+            .option(OptionNumber::UriPath, b"test")?
+            .option(OptionNumber::ContentFormat, &[0])?
             .no_payload()
             .build();
 
@@ -528,24 +520,21 @@ mod tests {
             .find(|opt| opt.number == OptionNumber::MaxAge)
             .map(|opt| opt.value);
         assert_eq!(missing, None);
+
+        Ok(())
     }
 
     #[test]
-    fn parse_option_find_all() {
+    fn parse_option_find_all() -> Result<(), CoapBuildError> {
         let mut buffer = [0; 128];
 
-        let packet = MessageBuilder::new(&mut buffer)
-            .unwrap()
+        let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x0001)
-            .no_token()
-            .unwrap()
-            .option(OptionNumber::UriPath, b"api")
-            .unwrap()
-            .option(OptionNumber::UriPath, b"v1")
-            .unwrap()
-            .option(OptionNumber::UriPath, b"resource")
-            .unwrap()
+            .no_token()?
+            .option(OptionNumber::UriPath, b"api")?
+            .option(OptionNumber::UriPath, b"v1")?
+            .option(OptionNumber::UriPath, b"resource")?
             .no_payload()
             .build();
 
@@ -561,22 +550,20 @@ mod tests {
         assert_eq!(paths[0], b"api");
         assert_eq!(paths[1], b"v1");
         assert_eq!(paths[2], b"resource");
+
+        Ok(())
     }
 
     #[test]
-    fn parse_option_as_uint() {
+    fn parse_option_as_uint() -> Result<(), CoapBuildError> {
         let mut buffer = [0; 128];
 
-        let packet = MessageBuilder::new(&mut buffer)
-            .unwrap()
+        let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x0001)
-            .no_token()
-            .unwrap()
-            .option(OptionNumber::MaxAge, &60u32.to_be_bytes())
-            .unwrap()
-            .option(OptionNumber::Accept, &[0])
-            .unwrap()
+            .no_token()?
+            .option(OptionNumber::MaxAge, &60u32.to_be_bytes())?
+            .option(OptionNumber::Accept, &[0])?
             .no_payload()
             .build();
 
@@ -595,20 +582,19 @@ mod tests {
             .find(|o| o.number == OptionNumber::Accept)
             .unwrap();
         assert_eq!(accept_opt.as_uint(), Some(0));
+
+        Ok(())
     }
 
     #[test]
-    fn parse_option_as_str() {
+    fn parse_option_as_str() -> Result<(), CoapBuildError> {
         let mut buffer = [0; 128];
 
-        let packet = MessageBuilder::new(&mut buffer)
-            .unwrap()
+        let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x0001)
-            .no_token()
-            .unwrap()
-            .option(OptionNumber::UriPath, b"hello")
-            .unwrap()
+            .no_token()?
+            .option(OptionNumber::UriPath, b"hello")?
             .no_payload()
             .build();
 
@@ -620,18 +606,18 @@ mod tests {
             .find(|o| o.number == OptionNumber::UriPath)
             .unwrap();
         assert_eq!(uri_path_opt.as_str(), Ok("hello"));
+
+        Ok(())
     }
 
     #[test]
-    fn parse_empty_message() {
+    fn parse_empty_message() -> Result<(), CoapBuildError> {
         let mut buffer = [0; 128];
 
-        let packet = MessageBuilder::new(&mut buffer)
-            .unwrap()
+        let packet = MessageBuilder::new(&mut buffer)?
             .empty(MessageType::Acknowledgement)
             .message_id(0xFFFF)
-            .no_token()
-            .unwrap()
+            .no_token()?
             .no_payload()
             .build();
 
@@ -641,6 +627,8 @@ mod tests {
         assert!(message.is_empty());
         assert!(!message.is_request());
         assert!(!message.is_response());
+
+        Ok(())
     }
 
     #[test]
@@ -668,20 +656,17 @@ mod tests {
     }
 
     #[test]
-    fn parse_content_format() {
+    fn parse_content_format() -> Result<(), CoapBuildError> {
         let mut buffer = [0; 128];
 
         use crate::ContentFormat;
 
         // Test with TextPlain (0)
-        let packet = MessageBuilder::new(&mut buffer)
-            .unwrap()
+        let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Post)
             .message_id(0x0001)
-            .no_token()
-            .unwrap()
-            .option(OptionNumber::ContentFormat, &[0])
-            .unwrap()
+            .no_token()?
+            .option(OptionNumber::ContentFormat, &[0])?
             .no_payload()
             .build();
 
@@ -698,14 +683,11 @@ mod tests {
 
         // Test with ApplicationJson (50)
         let mut buffer = [0; 128];
-        let packet = MessageBuilder::new(&mut buffer)
-            .unwrap()
+        let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Post)
             .message_id(0x0001)
-            .no_token()
-            .unwrap()
-            .option(OptionNumber::ContentFormat, &[50])
-            .unwrap()
+            .no_token()?
+            .option(OptionNumber::ContentFormat, &[50])?
             .no_payload()
             .build();
 
@@ -722,14 +704,11 @@ mod tests {
 
         // Test with unknown content format
         let mut buffer = [0; 128];
-        let packet = MessageBuilder::new(&mut buffer)
-            .unwrap()
+        let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Post)
             .message_id(0x0001)
-            .no_token()
-            .unwrap()
-            .option(OptionNumber::ContentFormat, &[99])
-            .unwrap()
+            .no_token()?
+            .option(OptionNumber::ContentFormat, &[99])?
             .no_payload()
             .build();
 
@@ -743,5 +722,7 @@ mod tests {
         assert_eq!(content_format_opt.as_uint(), Some(99));
         let cf: ContentFormat = (content_format_opt.as_uint().unwrap() as u16).into();
         assert_eq!(cf, ContentFormat::Unknown(99));
+
+        Ok(())
     }
 }

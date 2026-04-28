@@ -294,7 +294,7 @@ impl<'buf> MessageBuilder<'buf, Complete> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::OptionNumber;
 
