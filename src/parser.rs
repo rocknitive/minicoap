@@ -395,7 +395,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x1234)
-            .no_token()?
+            .no_token()
             .no_payload()
             .build();
 
@@ -442,7 +442,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::NonConfirmable, RequestCode::Post)
             .message_id(0x0001)
-            .no_token()?
+            .no_token()
             .payload(payload_data)?
             .build();
 
@@ -461,7 +461,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x5678)
-            .no_token()?
+            .no_token()
             .option(OptionNumber::UriPath, b"temperature")?
             .option(OptionNumber::UriPath, b"sensor")?
             .option(OptionNumber::Accept, &[0])?
@@ -492,7 +492,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x0001)
-            .no_token()?
+            .no_token()
             .option(OptionNumber::UriPath, b"test")?
             .option(OptionNumber::ContentFormat, &[0])?
             .no_payload()
@@ -531,7 +531,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x0001)
-            .no_token()?
+            .no_token()
             .option(OptionNumber::UriPath, b"api")?
             .option(OptionNumber::UriPath, b"v1")?
             .option(OptionNumber::UriPath, b"resource")?
@@ -561,7 +561,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x0001)
-            .no_token()?
+            .no_token()
             .option(OptionNumber::MaxAge, &60u32.to_be_bytes())?
             .option(OptionNumber::Accept, &[0])?
             .no_payload()
@@ -593,7 +593,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x0001)
-            .no_token()?
+            .no_token()
             .option(OptionNumber::UriPath, b"hello")?
             .no_payload()
             .build();
@@ -617,7 +617,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut buffer)?
             .empty(MessageType::Acknowledgement)
             .message_id(0xFFFF)
-            .no_token()?
+            .no_token()
             .no_payload()
             .build();
 
@@ -665,7 +665,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Post)
             .message_id(0x0001)
-            .no_token()?
+            .no_token()
             .option(OptionNumber::ContentFormat, &[0])?
             .no_payload()
             .build();
@@ -686,7 +686,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Post)
             .message_id(0x0001)
-            .no_token()?
+            .no_token()
             .option(OptionNumber::ContentFormat, &[50])?
             .no_payload()
             .build();
@@ -707,7 +707,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut buffer)?
             .request(MessageType::Confirmable, RequestCode::Post)
             .message_id(0x0001)
-            .no_token()?
+            .no_token()
             .option(OptionNumber::ContentFormat, &[99])?
             .no_payload()
             .build();

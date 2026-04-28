@@ -122,7 +122,7 @@ use minicoap::{ResponseCode, MessageType, OptionNumber, ContentFormat};
 let response = MessageBuilder::new(&mut buffer)?
     .response(MessageType::Acknowledgement, ResponseCode::Content)
     .message_id(0x1234)
-    .no_token()?
+    .no_token()
     .option_uint(OptionNumber::ContentFormat, ContentFormat::TextPlain)?
     .payload(b"Hello, CoAP!")?
     .build();

@@ -155,15 +155,15 @@ impl<'buf> MessageBuilder<'buf, NeedsToken> {
     }
 
     /// Skip adding a token (uses a zero-length token)
-    pub fn no_token(self) -> BuilderResult<'buf, NeedsPayload> {
+    pub fn no_token(self) -> MessageBuilder<'buf, NeedsPayload> {
         // TKL is already set to 0, just transition state.
 
-        Ok(MessageBuilder {
+        MessageBuilder {
             buffer: self.buffer,
             offset: self.offset,
             last_option_number: self.last_option_number,
             _state: PhantomData,
-        })
+        }
     }
 }
 
@@ -305,7 +305,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut tx_buf)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0)
-            .no_token()?
+            .no_token()
             .no_payload()
             .build();
 
@@ -357,7 +357,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut tx_buf)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x1234)
-            .no_token()?
+            .no_token()
             .option_uint(OptionNumber::Accept, 0u8)?
             .no_payload()
             .build();
@@ -385,7 +385,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut tx_buf)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x1234)
-            .no_token()?
+            .no_token()
             .option_uint(OptionNumber::MaxAge, 60u32)?
             .no_payload()
             .build();
@@ -411,7 +411,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut tx_buf)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x1234)
-            .no_token()?
+            .no_token()
             .option_uint(OptionNumber::Accept, 50u8)?
             .no_payload()
             .build();
@@ -426,7 +426,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut tx_buf)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x1234)
-            .no_token()?
+            .no_token()
             .option_uint(OptionNumber::UriPort, 8080u16)?
             .no_payload()
             .build();
@@ -440,7 +440,7 @@ mod tests {
         let packet = MessageBuilder::new(&mut tx_buf)?
             .request(MessageType::Confirmable, RequestCode::Get)
             .message_id(0x1234)
-            .no_token()?
+            .no_token()
             .option_uint(OptionNumber::MaxAge, 86400u32)?
             .no_payload()
             .build();
@@ -463,7 +463,7 @@ mod tests {
             let packet = MessageBuilder::new(&mut tx_buf)?
                 .request(MessageType::Confirmable, RequestCode::Get)
                 .message_id(0x1234)
-                .no_token()?
+                .no_token()
                 .option_uint(OptionNumber::MaxAge, value)?
                 .no_payload()
                 .build();
