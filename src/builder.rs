@@ -270,6 +270,37 @@ impl<'buf> MessageBuilder<'buf, NeedsPayload> {
         })
     }
 
+    /// Serialize a payload directly into the packet buffer.
+    pub fn payload_with<F>(mut self, fill: F) -> BuilderResult<'buf, Complete>
+    where
+        F: FnOnce(&mut [u8]) -> Result<usize, CoapBuildError>,
+    {
+        if self.offset + 1 >= self.buffer.len() {
+            return Err(CoapBuildError::BufferTooSmall);
+        }
+
+        let payload = &mut self.buffer[self.offset + 1..];
+        let used = fill(payload)?;
+
+        if used == 0 {
+            return Err(CoapBuildError::PayloadMarkerWithoutPayload);
+        }
+
+        if used > payload.len() {
+            return Err(CoapBuildError::BufferTooSmall);
+        }
+
+        self.buffer[self.offset] = 0xFF;
+        self.offset += 1 + used;
+
+        Ok(MessageBuilder {
+            buffer: self.buffer,
+            offset: self.offset,
+            last_option_number: self.last_option_number,
+            _state: PhantomData,
+        })
+    }
+
     /// Skips adding a payload to the packet.
     pub fn no_payload(self) -> MessageBuilder<'buf, Complete> {
         MessageBuilder {
@@ -505,6 +536,106 @@ mod tests {
 
         assert_eq!(opt.as_uint(), Some(u64::from(block)));
         assert_eq!(opt.as_block().unwrap(), block);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_payload_with_writes_payload() -> Result<(), CoapBuildError> {
+        let mut tx_buf = [0; 128];
+
+        let packet = MessageBuilder::new(&mut tx_buf)?
+            .request(MessageType::Confirmable, RequestCode::Post)
+            .message_id(0x1234)
+            .no_token()
+            .payload_with(|payload| {
+                payload[..3].copy_from_slice(b"abc");
+                Ok(3)
+            })?
+            .build();
+
+        let msg = crate::parser::Message::parse(packet).unwrap();
+        assert_eq!(msg.payload, Some(&b"abc"[..]));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_payload_with_zero_bytes_skips_payload_marker() -> Result<(), CoapBuildError> {
+        let mut tx_buf = [0; 128];
+
+        let result = MessageBuilder::new(&mut tx_buf)?
+            .request(MessageType::Confirmable, RequestCode::Post)
+            .message_id(0x1234)
+            .no_token()
+            .payload_with(|_| Ok(0));
+
+        let err = match result {
+            Ok(_) => panic!("payload_with should reject zero-byte payloads"),
+            Err(err) => err,
+        };
+
+        assert_eq!(err, CoapBuildError::PayloadMarkerWithoutPayload);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_payload_with_propagates_error() -> Result<(), CoapBuildError> {
+        let mut tx_buf = [0; 128];
+
+        let result = MessageBuilder::new(&mut tx_buf)?
+            .request(MessageType::Confirmable, RequestCode::Post)
+            .message_id(0x1234)
+            .no_token()
+            .payload_with(|_| Err(CoapBuildError::PayloadBuildFailed));
+
+        let err = match result {
+            Ok(_) => panic!("payload_with should return an error"),
+            Err(err) => err,
+        };
+
+        assert_eq!(err, CoapBuildError::PayloadBuildFailed);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_payload_with_detects_oversized_write() -> Result<(), CoapBuildError> {
+        let mut tx_buf = [0; 8];
+
+        let result = MessageBuilder::new(&mut tx_buf)?
+            .request(MessageType::Confirmable, RequestCode::Post)
+            .message_id(0x1234)
+            .no_token()
+            .payload_with(|payload| Ok(payload.len() + 1));
+
+        let err = match result {
+            Ok(_) => panic!("payload_with should return an error"),
+            Err(err) => err,
+        };
+
+        assert_eq!(err, CoapBuildError::BufferTooSmall);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_payload_with_requires_space_for_payload_byte() -> Result<(), CoapBuildError> {
+        let mut tx_buf = [0; 5];
+
+        let result = MessageBuilder::new(&mut tx_buf)?
+            .request(MessageType::Confirmable, RequestCode::Post)
+            .message_id(0x1234)
+            .token(&[1])?
+            .payload_with(|_| Ok(1));
+
+        let err = match result {
+            Ok(_) => panic!("payload_with should reject missing payload capacity"),
+            Err(err) => err,
+        };
+
+        assert_eq!(err, CoapBuildError::BufferTooSmall);
 
         Ok(())
     }

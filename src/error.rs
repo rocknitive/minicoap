@@ -4,6 +4,8 @@
 pub enum CoapBuildError {
     /// The provided buffer is too small to fit the message being constructed.
     BufferTooSmall,
+    /// Building the payload failed after request options had already been written.
+    PayloadBuildFailed,
     /// The token is longer than 8 bytes. Contains the actual length that was provided.
     TokenTooLong(usize),
     /// A payload marker (0xFF) was added but no payload data was provided.
@@ -20,6 +22,7 @@ impl core::fmt::Display for CoapBuildError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             CoapBuildError::BufferTooSmall => write!(f, "Buffer too small"),
+            CoapBuildError::PayloadBuildFailed => write!(f, "Payload build failed"),
             CoapBuildError::TokenTooLong(len) => {
                 write!(f, "Token too long (expected <= 8, got {})", len)
             }
@@ -81,7 +84,6 @@ impl core::fmt::Display for CoapParseError {
 }
 
 impl core::error::Error for CoapParseError {}
-
 
 /// Errors that can occur while validating or decoding a CoAP block option value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
