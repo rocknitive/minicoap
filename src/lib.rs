@@ -468,6 +468,15 @@ pub enum OptionNumber {
     ///
     /// Source: [RFC 7252 5.10.8.2](https://datatracker.ietf.org/doc/html/rfc7252#section-5.10.8.2)
     IfNoneMatch = 5,
+    /// The Observe Option requests that the server establish or refresh an observation relationship
+    /// for the target resource. In notifications from the server, the option carries the current
+    /// observe sequence value for the resource state.
+    ///
+    /// The option value is an integer between 0 and 2**24-1. A client registers interest by
+    /// sending the value 0, and deregisters by sending the value 1.
+    ///
+    /// Source: [RFC 7641 3.1](https://datatracker.ietf.org/doc/html/rfc7641#section-3.1)
+    Observe = 6,
     /// The Uri-Port Option specifies the transport-layer port number of the resource.
     ///
     /// The default value of the Uri-Port Option is the destination UDP port. The default value for
